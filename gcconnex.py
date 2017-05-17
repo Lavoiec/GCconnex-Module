@@ -28,8 +28,7 @@ def convert_unixtime(stamp):
 def convert_if_time(y):
     if 'id' not in y.name and (y.dtype == 'int64') and ('subtype' not in y.name):
 
-        y = y.apply(lambda x: dt.datetime.fromtimestamp(x)
-                    .strftime('%Y-%m-%d'))
+        y = y.apply(lambda x: dt.datetime.fromtimestamp(x).strftime('%Y-%m-%d') if x >86399 else dt.datetime.fromtimestamp(86400))
         return y
     else:
         return y
@@ -84,10 +83,7 @@ class users(object):  # Pulls in the entire users database
 
         users = pd.read_sql(user_query, conn)
 
-        users['last_action'] = users['last_action'].apply(convert_unixtime)
-        users['prev_last_action'] = users['prev_last_action'].apply(convert_unixtime)
-        users['last_login'] = users['last_login'].apply(convert_unixtime)
-        users['prev_last_login'] = users['prev_last_login'].apply(convert_unixtime)
+        users = users.apply(convert_if_time)
         return users
 
     def filter_(filter_condition):
