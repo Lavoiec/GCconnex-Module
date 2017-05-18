@@ -94,10 +94,7 @@ class users(object):  # Pulls in the entire users database
             ).statement, conn
         )
 
-        users['last_action'] = users['last_action'].apply(convert_unixtime)
-        users['prev_last_action'] = users['prev_last_action'].apply(convert_unixtime)
-        users['last_login'] = users['last_login'].apply(convert_unixtime)
-        users['prev_last_login'] = users['prev_last_login'].apply(convert_unixtime)
+        
 
         return users
 
@@ -128,11 +125,7 @@ class users(object):  # Pulls in the entire users database
 
         users_department = pd.read_sql(statement, conn)
 
-        users_department['last_action'] = users_department['last_action'].apply(convert_unixtime)
-        users_department['prev_last_action'] = users_department['prev_last_action'].apply(convert_unixtime)
-        users_department['last_login'] = users_department['last_login'].apply(convert_unixtime)
-        users_department['prev_last_login'] = users_department['prev_last_login'].apply(convert_unixtime)
-        users_department['time_created'] = users_department['time_created'].apply(convert_unixtime)
+        users_department =users_department.apply(convert_if_time)
 
         return users_department
 
