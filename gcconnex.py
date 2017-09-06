@@ -528,8 +528,9 @@ class micromissions(object):
         get_it_all.columns = ['Count']
         return get_it_all
 
-    def get_mission_data(summary=False):  # This needs to use the text query
-                        # Since SQLAlchemy does not suppport IN statements well
+    def get_mission_data(summary=False):  
+        # This needs to use the text query
+        # Since SQLAlchemy does not suppport IN statements well
 
         mission_data_string = """SELECT oe.guid guid,
          oe.title title,
@@ -848,3 +849,36 @@ class content(object):
         comments = pd.read_sql(statement, conn)
 
         return comments
+
+class communities(object):
+
+    def get_content_community(summary=False, groupby_vals=['string', 'subtype']):
+
+        entities_table = Base.classes.elggentities
+        metadata_table = Base.classes.elggmetadata
+        metastrings_table = Base.classes.elggmetastrings
+
+        statement = session.query(
+                entities_table.guid,
+                entities_table.subtype,
+                entities_table.time_created,
+                metadata_table.value_id,
+                metastrings_table.string    
+        )
+
+        statement = statement.filter(
+                metadata_table.entity_guid == entities_table.guid,
+                metastrings_table.id == metadata_table.value_id,
+                metadata_table.name_id == 35557,
+                entities_table.subtype != 67,
+                entities_table.subtype != 4
+        )
+
+        statement = statement.statement
+
+        content_community = pd.read_sql(statement, conn)
+
+        if summary:
+            content_community = content_community.groupby(groupby_vals).count()['guid']
+
+        return content_community
