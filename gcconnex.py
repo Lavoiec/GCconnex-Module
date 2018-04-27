@@ -658,7 +658,7 @@ class content(object):
     """
     Special content class
 
-    Returns the type of content as stated in the method name
+    Returns the type of content as stated in the method name.
     """
 
     def get_blogs(tags=False):
