@@ -26,6 +26,13 @@ def convert_unixtime(stamp):
 
 
 def convert_if_time(y):
+    """
+    Used for applying on a dataframe
+
+    If the column name contains 'id', then applies the fromtimestamp() and strftime() sequence
+
+    thanks to a windows error, the if condition makes it so that corrupted time entries are recorded to 2008
+    """
     if 'id' not in y.name and (y.dtype == 'int64') and ('subtype' not in y.name):
 
         y = y.apply(lambda x: dt.datetime.fromtimestamp(x).strftime('%Y-%m-%d') if x >86399 else dt.datetime.fromtimestamp(86400))
@@ -37,7 +44,10 @@ def convert_if_time(y):
 def connect_to_database():
     global engine
     global conn
-
+    """
+    One of two essential commands to access database
+    Need credentials to run.
+    """
 # Need to manually enter the username
 # password, and the database to create a valid connection
     username = getpass.getpass("Username")
@@ -59,6 +69,9 @@ def connect_to_database():
 
 
 def create_session():
+    """
+    Second part of the essential commands
+    """
 
     global session
     global Base
@@ -74,10 +87,15 @@ def create_session():
     return session, Base
 
 
-class users(object):  # Pulls in the entire users database
+class users(object):
+     """
+     The connection to the Users table.
+     """
 
     def get_all():  # Grabs entire table
-
+        """
+        Queries the entire users table
+        """
         users_table = Base.classes.elggusers_entity
         user_query = session.query(users_table).statement
 
@@ -87,6 +105,16 @@ class users(object):  # Pulls in the entire users database
         return users
 
     def filter_(filter_condition):
+        """
+        Allows you to enter a filter in the query for the entire users table
+        Pass it as a string into the function.
+
+        PROTIP: Use single quotes to filter out using strings
+
+        ex.
+
+        gc.users.filter_("name = 'USER_NAME'")
+        """
         users_session = session.query(users_table)
         users = pd.read_sql(
             users_session.filter(
@@ -94,11 +122,16 @@ class users(object):  # Pulls in the entire users database
             ).statement, conn
         )
 
-        
-
         return users
 
-    def department():  # Issue : doesn't pull all members. That's bad.
+    def department():
+        """
+        Returns:
+        [guid, name, email, last_action, prev_last_action, last_login, prev_last_login, time_created, department]
+
+        Note: This only returns entries that have filled out their department entry.
+        This returns a partial list of users.
+        """
 
         users_table = Base.classes.elggusers_entity
         entities_table = Base.classes.elggentities
@@ -131,8 +164,20 @@ class users(object):  # Pulls in the entire users database
 
 
 class groups(object):
+    """
+    Returns groups: The principle object in GCconnex
+    """
 
     def get_all(tags=False):
+        """
+        If tags is false, only returns groups table
+        returns [guid, title, description]
+
+        if tags is true, it merges with
+        the metadata and metastrings table,
+        returning all of both the groups table, metadata table
+        and the tag string
+        """
 
         if tags is False:
 
@@ -168,7 +213,17 @@ class groups(object):
 
             tags = get_it_all[['name', 'string']]
 
-            get_it_all = pd.DataFrame(tags.groupby('name')['string'].apply(list)).reset_index().merge(get_it_all.drop('string', axis=1).drop_duplicates(), on='name')
+            # Gathers all the tags that are associated with a group
+            # and brings them into one list that is stored in the dataframe
+            # under a column
+            get_it_all = (pd.DataFrame(
+                tags
+                .groupby('name')['string']
+                .apply(list))
+                .reset_index()
+                .merge(get_it_all.drop('string', axis=1)
+                .drop_duplicates(), on='name')
+                )
 
             get_it_all = get_it_all.apply(convert_if_time)
             return get_it_all
@@ -186,6 +241,13 @@ class groups(object):
         return groups_
 
     def get_membership(department=False):
+        """
+        Returns members of groups.
+        returns [user_name, user_guid, group_name, group_guid, time_of_join, user_department]
+
+        Contains same caveat as users by department. Only returns members of a group that
+        have indicated their department
+        """
 
         users_table = Base.classes.elggusers_entity
         groups_table = Base.classes.elgggroups_entity
@@ -260,10 +322,13 @@ class groups(object):
             return get_all
 
     def get_group_sizes():
-
+        """
+        Returns the group guid, group name, and the number of users in the group
+        """
         groups_table = Base.classes.elgggroups_entity
         relationships_table = Base.classes.elggentity_relationships
         statement = session.query(
+            groups_table.guid
             groups_table.name,
             relationships_table.guid_one
         )
@@ -286,8 +351,11 @@ class groups(object):
 
 
 class entities(object):
-
-    def getall():
+    """
+    Access to the entities table: It contains
+    information on every object in the GCconnex instance
+    """
+    def get_all():
 
         entities_table = Base.classes.elggentities
         entities_query = session.query(entities_table).statement
@@ -316,7 +384,9 @@ class entities(object):
 
 
 class metadata(object):
-
+    """
+    Contains data on the entities in GCconnex
+    """
     def get_all():
         metadata_table = Base.classes.elggmetadata
         metadata_query = session.query(metadata_table).statement
@@ -343,7 +413,9 @@ class metadata(object):
 
 
 class metastrings(object):
-
+    """
+    Contains the readable strings linked to the metadata table
+    """
     def get_all():
 
         metastrings_table = Base.classes.elggmetastrings
@@ -373,7 +445,9 @@ class metastrings(object):
 
 
 class relationships(object):
-
+    """
+    The table that logs all interactions between entities in the database.
+    """
     def get_all():
 
         relationships_table = Base.classes.elggentity_relationships
@@ -466,8 +540,16 @@ class objectsentity(object):
 
 class micromissions(object):
 
-    def get_users():
+    """
+    Special class that deals directly with Job Opportunities:
+    A popular feature on GCconnex
+    """
 
+    def get_users():
+        """
+        Returns the users who have opted into the micromissions
+        feature of GCconnex
+        """
         users_table = Base.classes.elggusers_entity
         metadata_table = Base.classes.elggmetadata
         metastrings_table = Base.classes.elggmetastrings
@@ -513,6 +595,10 @@ class micromissions(object):
         return get_it_all
 
     def get_aggregate():
+        """
+        Returns a count of users who have opted into micromissions
+        and users who have not
+        """
 
         metadata_table = Base.classes.elggmetadata
         metastrings_table = Base.classes.elggmetastrings
@@ -532,6 +618,12 @@ class micromissions(object):
         # This needs to use the text query
         # Since SQLAlchemy does not suppport IN statements well
 
+        """
+        returns
+        [mission_guid, mission_title, mission_action, mission_state, mission_type, time_of_relationship ]
+
+        If summary is true, returns a summary table to the different mission types
+        """
         mission_data_string = """SELECT oe.guid guid,
          oe.title title,
          r.relationship relationship,
@@ -563,6 +655,11 @@ class micromissions(object):
 
 
 class content(object):
+    """
+    Special content class
+
+    Returns the type of content as stated in the method name
+    """
 
     def get_blogs(tags=False):
 
