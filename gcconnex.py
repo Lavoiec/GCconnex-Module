@@ -88,10 +88,9 @@ def create_session():
 
 
 class users(object):
-     """
+    """
      The connection to the Users table.
-     """
-
+    """
     def get_all():  # Grabs entire table
         """
         Queries the entire users table
@@ -328,7 +327,7 @@ class groups(object):
         groups_table = Base.classes.elgggroups_entity
         relationships_table = Base.classes.elggentity_relationships
         statement = session.query(
-            groups_table.guid
+            groups_table.guid,
             groups_table.name,
             relationships_table.guid_one
         )
